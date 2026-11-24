@@ -1,106 +1,274 @@
-﻿# LYFTR AI — LLM Chatbot with Key Failover and Response Caching
+﻿# 
 
-A React + FastAPI chatbot using LiteLLM, an ordered API-key pool, LiteLLM local response caching, and SQLite-backed multi-turn sessions.
+# \# LYFTR AI — LLM Chatbot with Key Failover and Response Caching
 
-## Live URLs
+# 
 
-- Frontend: **Not deployed yet** — add the public URL after deployment.
-- Backend: **Not deployed yet** — add the public URL after deployment.
-- Health check: `<BACKEND_URL>/health`
+# A React + FastAPI chatbot using LiteLLM, an ordered API-key pool, LiteLLM response caching, and SQLite-backed multi-turn sessions.
 
-Do not submit placeholder URLs. The live services must be deployed and reachable without login.
+# 
 
-## Run locally: with Docker and without
+# \## Live URLs
 
-### Prerequisites
+# 
 
-- Docker Desktop with Docker Compose, or Python 3.11+ and Node.js 20+.
-- At least two valid Google AI Studio API keys. The application never stores or displays key values in responses.
+# \- Frontend: https://lyftr-ai-chatbot-dusky.vercel.app
 
-### Docker (required local path)
+# \- Backend: https://lyftr-ai-backend-3kev.onrender.com
 
-1. Copy `.env.example` to `.env`.
-2. Set `LLM_API_KEYS` to two comma-separated valid Google AI Studio keys. Keep `.env` private.
-3. Keep `VITE_API_URL=http://localhost:8000` for local Docker use.
-4. Run `make up` from the repository root.
-5. Open `http://localhost:3000`; check `http://localhost:8000/health`.
-6. Stop with `make down`. The named `lyftr_data` volume preserves `/data/app.db`.
+# \- Health check: https://lyftr-ai-backend-3kev.onrender.com/health
 
-### Without Docker
+# \- GitHub: https://github.com/Yash-uy/LYFTR-AI-Chatbot
 
-Backend (terminal 1):
+# 
 
-```bash
-cd backend
-python -m venv .venv
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-# Set LLM_API_KEYS, DATABASE_URL=sqlite:///./app.db, ALLOWED_ORIGINS=http://localhost:3000
-uvicorn app.main:app --reload --port 8000
-```
+# The frontend and backend are publicly accessible. The Render Free backend may take some time to respond after inactivity because free services can spin down.
 
-Frontend (terminal 2):
+# 
 
-```bash
-cd frontend
-npm install
-# Windows PowerShell: $env:VITE_API_URL="http://localhost:8000"
-# macOS/Linux: VITE_API_URL=http://localhost:8000
-npm run dev -- --port 3000
-```
+# \## Run locally: with Docker and without
 
-The frontend creates a fresh session ID on each page load. It sends only the new user message; the backend rebuilds the model prompt from the stored SQLite history.
+# 
 
-## Design decisions: key fallback, caching, SQLite session storage
+# \### Prerequisites
 
-- **Key fallback:** `LLM_API_KEYS` is parsed in order into `key_1`, `key_2`, etc. The gateway attempts keys sequentially. Retryable rate-limit, quota, authentication and provider/server errors advance to the next key. The response exposes only the key identifier, never the secret.
-- **Failure simulation:** when `ENABLE_FAILURE_SIMULATION=true`, `X-Simulate-Failure` can simulate `key_1=429`, `key_1=429,key_2=500`, or `*=429` for one request. The hook does not exhaust or modify real keys. It is intended for the required demonstration and should be disabled when no longer needed.
-- **Caching:** LiteLLM's built-in local cache is enabled. The explicit cache identity is derived from model plus the full system/user/assistant message list. The LiteLLM response cache retains the original response usage; cache metadata reports `key_id: null` and `fallback_attempts: 0` when LiteLLM marks a cache hit.
-- **SQLite:** the `messages` table is created at startup. A small `sessions` table retains the optional per-session system prompt. Docker mounts a named volume at `/data`; the database URL is configured by `DATABASE_URL`.
-- **Failure safety:** a user/assistant pair is written only after successful inference. Failed 422/503 requests do not add history. API errors use JSON `detail` messages.
-- **Token counts:** input/output counts are read from the provider/LiteLLM response for that completion, not accumulated across the conversation.
+# 
 
-## Verification: how to see failover, cache hits and per-message token usage
+# \- Docker Desktop with Docker Compose, or Python 3.11+ and Node.js 20+.
 
-1. Run the backend with two valid keys and `ENABLE_FAILURE_SIMULATION=true`.
-2. Send a new chat request normally. The metadata should show `LIVE_INFERENCE`, `key_1`, and request-specific token counts.
-3. Repeat the same first message with a different `session_id`. With identical model and full prompt, LiteLLM should return `LLM_CACHE`; the reply and token usage should match, and `key_id` should be null. Cache hit detection is based on LiteLLM response metadata, not a UI-only label.
-4. Send a fresh message with header `X-Simulate-Failure: key_1=429`. It should return a real model answer with `key_id: key_2` and check `fallback_attempts` in the response metadata. It counts failed provider/model attempts before success and may be greater than 1.
-5. Send a fresh message with `X-Simulate-Failure: *=429`. It should return HTTP 503 and `{"detail":"all providers unavailable"}`. The failed request must not appear in history.
-6. Check `GET /sessions/{session_id}/messages`; it returns messages oldest-first without the system prompt.
-7. `cd backend && python -m pytest -q` runs the backend API contract tests. The automated tests stub the provider boundary for deterministic API tests; real-provider cache/failover checks still require two working keys.
+# \- At least two valid Google AI Studio API keys. API key values must remain private.
 
-Example curl:
+# 
 
-```bash
-curl -X POST http://localhost:8000/chat \
-  -H 'Content-Type: application/json' \
-  -H 'X-Simulate-Failure: key_1=429' \
-  -d '{"session_id":"fallback-demo","message":"Explain failover in one sentence."}'
-```
+# \### Docker (required local path)
 
-## Setup Used
+# 
 
-- Editor: VS Code (project is structured for local development).
-- AI tools: ChatGPT-assisted implementation; review and verification should be completed before submission.
-- Runtime: Python 3.11, FastAPI, LiteLLM, SQLAlchemy, SQLite, React 18, Vite, Node 20 and Docker Compose.
+# 1\. Copy `.env.example` to `.env`.
 
-## Bonus features (if any)
+# 2\. Set `LLM\_API\_KEYS` to two comma-separated valid Google AI Studio API keys.
 
-- Optional per-session system prompt persisted between turns.
-- Responsive dark interface with connection status, suggestion prompts and readable API errors.
-- Database index on `(session_id, id)` for ordered session-history reads.
+# 3\. Keep `.env` private and never commit it.
 
-## Deployment checklist
+# 4\. Keep `VITE\_API\_URL=http://localhost:8000` for local Docker use.
 
-- Deploy the backend as a Docker web service with persistent storage mounted at `/data`.
-- Set `DATABASE_URL=sqlite:////data/app.db`, configure two valid `LLM_API_KEYS`, set `LLM_MODEL`, and configure `ALLOWED_ORIGINS` to the exact frontend origin.
-- Set `ENABLE_FAILURE_SIMULATION=true` only when failure simulation is needed for the demo. Disable it in normal production use.
-- Deploy the frontend as a static site or Docker service. Set build-time `VITE_API_URL` to the deployed backend base URL, then rebuild and redeploy.
-- Verify `/health`, `/chat`, and `/sessions/{session_id}/messages` on the public backend.
-- Verify browser CORS from the public frontend.
-- Update the Live URLs section with the actual deployed frontend and backend URLs after deployment.
-- Never commit `.env`, API keys, or other secrets to the public repository.
+# 5\. Run `make up` from the repository root.
+
+# 6\. Open `http://localhost:3000`.
+
+# 7\. Check `http://localhost:8000/health`.
+
+# 8\. Stop with `make down`.
+
+# 
+
+# Docker Compose mounts a named volume at `/data`, preserving `/data/app.db` across container restarts.
+
+# 
+
+# \### Without Docker
+
+# 
+
+# Backend (terminal 1):
+
+# 
+
+# ```bash
+
+# cd backend
+
+# python -m venv .venv
+
+# \# Windows PowerShell:
+
+# .venv\\Scripts\\Activate.ps1
+
+# \# macOS/Linux:
+
+# source .venv/bin/activate
+
+# pip install -r requirements.txt
+
+# \# Configure LLM\_API\_KEYS, DATABASE\_URL and ALLOWED\_ORIGINS.
+
+# uvicorn app.main:app --reload --port 8000
+
+# ```
+
+# 
+
+# Frontend (terminal 2):
+
+# 
+
+# ```bash
+
+# cd frontend
+
+# npm install
+
+# \# Windows PowerShell:
+
+# $env:VITE\_API\_URL="http://localhost:8000"
+
+# \# macOS/Linux:
+
+# VITE\_API\_URL=http://localhost:8000 npm run dev -- --port 3000
+
+# ```
+
+# 
+
+# The frontend creates a fresh session ID on each page load. It sends only the new user message; the backend rebuilds the model prompt from stored SQLite history.
+
+# 
+
+# \## Design decisions: key fallback, caching, SQLite session storage
+
+# 
+
+# \- \*\*Key fallback:\*\* `LLM\_API\_KEYS` is parsed in order into `key\_1`, `key\_2`, etc. The gateway attempts keys sequentially for each configured model. Failed provider attempts advance to the next key/model. The response exposes only the key identifier, never the secret.
+
+# \- \*\*Failure simulation:\*\* When `ENABLE\_FAILURE\_SIMULATION=true`, `X-Simulate-Failure` can simulate `key\_1=429`, `key\_1=429,key\_2=500`, or `\*=429`. The hook skips the selected key for that request without modifying real keys.
+
+# \- \*\*Caching:\*\* LiteLLM's built-in local cache is enabled. The explicit cache identity is derived from the model and the full system/user/assistant message list. A cache hit reports `resolution\_source: LLM\_CACHE`, `key\_id: null`, and `fallback\_attempts: 0`.
+
+# \- \*\*SQLite:\*\* The `messages` table stores conversation messages. A `sessions` table retains the optional per-session system prompt. Docker mounts a named volume at `/data`; the database URL is configured through `DATABASE\_URL`.
+
+# \- \*\*Failure safety:\*\* Messages are written only after successful inference. Failed 422/503 requests do not add messages to session history. API errors use JSON `detail` responses.
+
+# \- \*\*Token counts:\*\* Input/output token counts are read from the provider/LiteLLM response for each completion, not accumulated across the conversation.
+
+# 
+
+# \### Deployment storage limitation
+
+# 
+
+# The local Docker configuration uses a named persistent volume mounted at `/data`.
+
+# 
+
+# The deployed Render Free service uses `/tmp/app.db` because persistent disks are not included in the selected free setup. This filesystem is ephemeral: database contents can be lost when the service restarts, redeploys, or spins down. Therefore, deployed SQLite history is not guaranteed to persist. The local Docker configuration provides persistent SQLite storage.
+
+# 
+
+# The LiteLLM local cache is also instance-local and may be cleared when the service restarts.
+
+# 
+
+# \## Verification: how to see failover, cache hits and per-message token usage
+
+# 
+
+# 1\. Configure at least two valid API keys and set `ENABLE\_FAILURE\_SIMULATION=true`.
+
+# 2\. Send a new chat request. Metadata should show `LIVE\_INFERENCE`, the key identifier, and request-specific token counts.
+
+# 3\. Repeat the identical first message with a different `session\_id`. LiteLLM should return `LLM\_CACHE`; the reply and token usage should match, with `key\_id: null`.
+
+# 4\. Send a fresh message with `X-Simulate-Failure: key\_1=429`. It should return a real model answer using `key\_2`. Check `fallback\_attempts` in response metadata; it can be greater than 1 because it counts failed provider/model attempts.
+
+# 5\. Send a fresh message with `X-Simulate-Failure: \*=429`. It should return HTTP 503 with `{"detail":"all providers unavailable"}`.
+
+# 6\. Check `GET /sessions/{session\_id}/messages`. It returns messages oldest-first without the system prompt. A failed request should not create a session or add messages.
+
+# 7\. Run backend tests:
+
+# 
+
+# ```bash
+
+# cd backend
+
+# python -m pytest -q
+
+# ```
+
+# 
+
+# The automated tests stub the provider boundary for deterministic API tests. Real-provider cache and failover checks require two working API keys.
+
+# 
+
+# Example curl:
+
+# 
+
+# ```bash
+
+# curl -X POST http://localhost:8000/chat \\
+
+# &#x20; -H 'Content-Type: application/json' \\
+
+# &#x20; -H 'X-Simulate-Failure: key\_1=429' \\
+
+# &#x20; -d '{"session\_id":"fallback-demo","message":"Explain failover in one sentence."}'
+
+# ```
+
+# 
+
+# \## Setup Used
+
+# 
+
+# \- Editor: Visual Studio Code.
+
+# \- AI tools: ChatGPT-assisted implementation and debugging.
+
+# \- Backend: Python 3.11, FastAPI, LiteLLM, SQLAlchemy and SQLite.
+
+# \- Frontend: React 18 and Vite.
+
+# \- Containerization: Docker and Docker Compose.
+
+# \- Backend hosting: Render Free.
+
+# \- Frontend hosting: Vercel Hobby.
+
+# \- Source control: Git and GitHub.
+
+# 
+
+# \## Bonus features (if any)
+
+# 
+
+# \- Optional per-session system prompt persisted between turns.
+
+# \- Responsive dark interface with connection status, suggestion prompts and readable API errors.
+
+# \- Database index on `(session\_id, id)` for ordered session-history reads.
+
+# \- Safe provider diagnostics that log model, key identifier, status and exception type without exposing API key values.
+
+# 
+
+# \## Deployment checklist
+
+# 
+
+# \- Backend deployed as a Docker web service.
+
+# \- Frontend deployed as a Vercel static site.
+
+# \- `VITE\_API\_URL` configured to the deployed backend URL.
+
+# \- `ALLOWED\_ORIGINS` configured to the exact frontend origin.
+
+# \- Two API keys configured in the backend environment.
+
+# \- `DATABASE\_URL` configured for the deployment environment.
+
+# \- `/health`, `/chat` and `/sessions/{session\_id}/messages` verified.
+
+# \- Cache hit and simulated failover verified against the live service.
+
+# \- `.env`, API keys and other secrets excluded from the public repository.
+
+# \- Note: Render Free does not provide persistent SQLite storage in this deployment; see Deployment storage limitation above.
+
 
 
