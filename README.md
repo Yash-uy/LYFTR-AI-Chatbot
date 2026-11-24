@@ -1,11 +1,11 @@
-﻿# LYFTR AI â€” LLM Chatbot with Key Failover and Response Caching
+﻿# LYFTR AI — LLM Chatbot with Key Failover and Response Caching
 
 A React + FastAPI chatbot using LiteLLM, an ordered API-key pool, LiteLLM local response caching, and SQLite-backed multi-turn sessions.
 
 ## Live URLs
 
-- Frontend: **Not deployed yet** â€” add the public URL after deployment.
-- Backend: **Not deployed yet** â€” add the public URL after deployment.
+- Frontend: **Not deployed yet** — add the public URL after deployment.
+- Backend: **Not deployed yet** — add the public URL after deployment.
 - Health check: `<BACKEND_URL>/health`
 
 Do not submit placeholder URLs. The live services must be deployed and reachable without login.
@@ -102,4 +102,5 @@ curl -X POST http://localhost:8000/chat \
 - Verify browser CORS from the public frontend.
 - Update the Live URLs section with the actual deployed frontend and backend URLs after deployment.
 - Never commit `.env`, API keys, or other secrets to the public repository.
+
 
